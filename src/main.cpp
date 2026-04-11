@@ -9,9 +9,40 @@
 
 #pragma comment(lib, "Ws2_32.lib")
 
+int gestisciClient (SOCKET socketClient) {
+
+    char buffer [4096];
+    std::cout <<"[SERVER] nuovo client connesso" << socketClient << std::endl;
+
+    while (true)
+    {
+        ZeroMemory(buffer, 4096);
+
+        int datiClient =recv(socketClient, buffer ,4096, 0) ;
+
+        if (datiClient <= 0) {
+
+            std::cout << "[SERVER] client disconnesso" << std::endl ;
+            break;
+        };
+
+        std::cout << "[CLIENT " << socketClient << "] " << std::string(buffer, 0 , datiClient) << std::endl;        
+
+        std::string confermaRecezione = "messaggio ricevuto";
+        send(socketClient, confermaRecezione.c_str(), confermaRecezione.length() +1 , 0);
+
+    };
+    
+    closesocket(socketClient);
+
+}
+
+
 int main () {
 
+    std::string pswdNS;
     int porta;
+    int pswd;
     //tipo di indirizzo tipo IPV4
     int indirizzo = AF_INET;
     //se la connessione deve essere tcp o altro (udp)
@@ -21,6 +52,14 @@ int main () {
 
     std::cout << "scegli la porta da aprire: \n";
     std::cin >> porta;
+
+    std::cout << "\n vuoi una password (rispondi SOLO con S o N)";
+    std::cin >> pswdNS;
+
+    if (pswdNS != "S"){
+        std::cout << "scegli la password";
+        std::cin >> pswd;
+    };
 
     WSADATA wsaData;
     int wsa = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -42,10 +81,26 @@ int main () {
 
     };
 
+    
+
+    while(true){
+
+        listen(ascolto, SOMAXCONN);
+        SOCKET socketClient = accept(ascolto, NULL, NULL); 
+        if(socketClient != INVALID_SOCKET){
+
+            std::thread t(gestisciClient, socketClient);
+            
+            t.detach();
+
+
+
+
+    }};
+
     closesocket(ascolto);
     WSACleanup();
-
-
+    return 0;
 
 }
 
