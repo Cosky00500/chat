@@ -1,5 +1,7 @@
 //g++ main.cpp -o main.exe -lws2_32
 
+#include <algorithm>
+#include <mutex>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -9,6 +11,9 @@
 
 #pragma comment(lib, "Ws2_32.lib")
 
+std::mutex mtx;
+std::vector<SOCKET> listaClient;
+
 int gestisciClient (SOCKET socketClient) {
 
     char buffer [4096];
@@ -16,14 +21,21 @@ int gestisciClient (SOCKET socketClient) {
 
     while (true)
     {
+
         ZeroMemory(buffer, 4096);
 
         int datiClient =recv(socketClient, buffer ,4096, 0) ;
 
         if (datiClient <= 0) {
 
-            std::cout << "[SERVER] client disconnesso" << std::endl ;
-            break;
+            std::cout << "[SERVER] client" << socketClient << "disconnesso" << std::endl ;
+        
+            mtx.lock();
+            listaClient.erase(std::remove(listaClient.begin(), listaClient.end(), socketClient), listaClient.end());
+            mtx.unlock();
+
+            closesocket(socketClient);
+
         };
 
         std::cout << "[CLIENT " << socketClient << "] " << std::string(buffer, 0 , datiClient) << std::endl;        
@@ -81,19 +93,21 @@ int main () {
 
     };
 
-    
+    listen(ascolto, SOMAXCONN);
 
     while(true){
 
-        listen(ascolto, SOMAXCONN);
+        
         SOCKET socketClient = accept(ascolto, NULL, NULL); 
         if(socketClient != INVALID_SOCKET){
+
+            mtx.lock();
+            listaClient.push_back(socketClient);
+            mtx.unlock();
 
             std::thread t(gestisciClient, socketClient);
             
             t.detach();
-
-
 
 
     }};
